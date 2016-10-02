@@ -14,10 +14,11 @@
 
 // Set up the stepper driver and the AccelStepper speed control objects
 
-Adafruit_StepperMotor motor;
+Adafruit_MotorShield shield = Adafruit_MotorShield();
+Adafruit_StepperMotor* pMotor = shield.getStepper(200, 1);
 
-void forwardStepFn() { motor.onestep(FORWARD, SINGLE); }
-void backwardStepFn() { motor.onestep(BACKWARD, SINGLE); }
+void forwardStepFn() { pMotor->onestep(FORWARD, SINGLE); }
+void backwardStepFn() { pMotor->onestep(BACKWARD, SINGLE); }
 
 AccelStepper stepper(forwardStepFn, backwardStepFn);
 
@@ -28,10 +29,15 @@ Bounce retractButton = Bounce();
 
 // Define state variables for speed control
 
-float stepperSpeed;
+float stepperSpeed = 800.0;
 float retractSpeed = -200;
 
+bool logging = true;
+
 void setup() {
+
+   shield.begin();
+
    // configure pins for reading 8 channels from ABB digital output
    initializeRobotPins();
 
@@ -42,10 +48,16 @@ void setup() {
 
    // start with stepper stationary
    stepper.setSpeed(0);
+
+   if (logging) {
+      Serial.begin(9600);
+      Serial.print("Cakebot stepper controller initalized\n");
+   }
 }
 
 void loop() {
-   int robotSignal = readRobotSignal();
+   /*
+   char robotSignal = readRobotSignal();
 
    retractButton.update();
    if (retractButton.read()) {
@@ -53,6 +65,7 @@ void loop() {
    } else {
       stepperSpeed = (float)robotSignal;
    }
+   */
 
    stepper.setSpeed(stepperSpeed);
    stepper.runSpeed();
