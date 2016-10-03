@@ -12,6 +12,8 @@
 
 #include "robotIO.h"
 
+RobotIO robot;
+
 // Set up the stepper driver and the AccelStepper speed control objects
 
 Adafruit_MotorShield shield = Adafruit_MotorShield();
@@ -22,51 +24,81 @@ void backwardStepFn() { pMotor->onestep(BACKWARD, SINGLE); }
 
 AccelStepper stepper(forwardStepFn, backwardStepFn);
 
-// Define pins and debounce object for the retract button
+// Define pins and debouncers for the advance/retract buttons
 
-int pinRetractButton = 8;
+int pinAdvanceButton = 8;
+int pinRetractButton = 9;
+Bounce advanceButton = Bounce();
 Bounce retractButton = Bounce();
 
-// Define state variables for speed control
+int pinControlModeSwitch = 10;
 
-float stepperSpeed = 800.0;
-float retractSpeed = -200;
+// State variables and speed defaults
 
-bool logging = true;
+enum Mode {
+   Manual,
+   Automatic
+} controlMode;
+
+float manualAdvanceSpeed = 400;
+float manualRetractSpeed = -400;
 
 void setup() {
 
    shield.begin();
 
-   // configure pins for reading 8 channels from ABB digital output
-   initializeRobotPins();
+   // configure input pin for the manual pluger control buttons
+   pinMode(pinAdvanceButton, INPUT_PULLUP);
+   advanceButton.attach(pinAdvanceButton);
+   advanceButton.interval(5);
 
-   // configure input pin for the plunger retract button
    pinMode(pinRetractButton, INPUT_PULLUP);
    retractButton.attach(pinRetractButton);
    retractButton.interval(5);
 
-   // start with stepper stationary
-   stepper.setSpeed(0);
+   pinMode(pinControlModeSwitch, INPUT_PULLUP);
 
-   if (logging) {
-      Serial.begin(9600);
-      Serial.print("Cakebot stepper controller initalized\n");
-   }
+   // start with stepper stationary
+   controlMode = Manual;
+   stepper.setSpeed(0);
 }
 
 void loop() {
-   /*
-   char robotSignal = readRobotSignal();
+   float stepperSpeed = 0.0;
 
-   retractButton.update();
-   if (retractButton.read()) {
-      stepperSpeed = retractSpeed;
-   } else {
-      stepperSpeed = (float)robotSignal;
+   int modeSwitch = digitalRead(pinControlModeSwitch);
+   if (modeSwitch == LOW && controlMode == Manual) {
+      controlMode = Automatic;
+      robot.start();
+   } else if (modeSwitch == HIGH && controlMode == Automatic) {
+      controlMode = Manual;
+      robot.stop();
    }
-   */
+
+   if (controlMode == Manual) {
+      retractButton.update();
+      advanceButton.update();
+      if (retractButton.read() == LOW) {
+         stepperSpeed = manualRetractSpeed;
+      } else if (advanceButton.read() == LOW) {
+         stepperSpeed = manualAdvanceSpeed;
+      }
+   } else if (controlMode == Automatic) {
+      unsigned char robotSignal = robot.readByte();
+
+      //robotSignal &= B11111100;
+
+      if (robotSignal == 0xFF) {
+         stepperSpeed = manualRetractSpeed;
+      } else {
+         stepperSpeed = robotSignal * 5.0;
+      }
+   }
 
    stepper.setSpeed(stepperSpeed);
-   stepper.runSpeed();
+   // stepper.runSpeed with speed == 0 seems to have some issues
+   // in this toolchain, possibly fp exception mask?
+   if (fabs(stepperSpeed) > 0.00001) {
+      stepper.runSpeed();
+   }
 }

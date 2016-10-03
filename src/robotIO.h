@@ -1,4 +1,8 @@
 // robotIO.h
 
-void initializeRobotPins();
-char readRobotSignal();
+class RobotIO {
+public:
+   void start();
+   void stop();
+   unsigned char readByte();
+};
