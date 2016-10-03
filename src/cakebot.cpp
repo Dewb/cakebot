@@ -19,8 +19,8 @@ RobotIO robot;
 Adafruit_MotorShield shield = Adafruit_MotorShield();
 Adafruit_StepperMotor* pMotor = shield.getStepper(200, 1);
 
-void forwardStepFn() { pMotor->onestep(FORWARD, SINGLE); }
-void backwardStepFn() { pMotor->onestep(BACKWARD, SINGLE); }
+void forwardStepFn() { pMotor->onestep(FORWARD, DOUBLE); }
+void backwardStepFn() { pMotor->onestep(BACKWARD, DOUBLE); }
 
 AccelStepper stepper(forwardStepFn, backwardStepFn);
 
@@ -40,8 +40,8 @@ enum Mode {
    Automatic
 } controlMode;
 
-float manualAdvanceSpeed = 400;
-float manualRetractSpeed = -400;
+float manualAdvanceSpeed = -400;
+float manualRetractSpeed = 400;
 
 void setup() {
 
@@ -96,7 +96,7 @@ void loop() {
       if (robotSignal == 0xFF) {
          stepperSpeed = manualRetractSpeed;
       } else {
-         stepperSpeed = robotSignal * 5.0;
+         stepperSpeed = robotSignal * -5.0;
       }
    }
 
