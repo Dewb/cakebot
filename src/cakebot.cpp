@@ -26,12 +26,12 @@ AccelStepper stepper(forwardStepFn, backwardStepFn);
 
 // Define pins and debouncers for the advance/retract buttons
 
-int pinAdvanceButton = 8;
-int pinRetractButton = 9;
+int pinAdvanceButton = 10;
+int pinRetractButton = 11;
 Bounce advanceButton = Bounce();
 Bounce retractButton = Bounce();
 
-int pinControlModeSwitch = 10;
+int pinControlModeSwitch = 12;
 
 // State variables and speed defaults
 
@@ -61,6 +61,9 @@ void setup() {
    // start with stepper stationary
    controlMode = Manual;
    stepper.setSpeed(0);
+
+   Serial.begin(9600);
+   Serial.println("Cakebot controller initialized.");
 }
 
 void loop() {
@@ -69,10 +72,12 @@ void loop() {
    int modeSwitch = digitalRead(pinControlModeSwitch);
    if (modeSwitch == LOW && controlMode == Manual) {
       controlMode = Automatic;
+      Serial.println("Entering automatic mode (under robot control.)");
       robot.start();
    } else if (modeSwitch == HIGH && controlMode == Automatic) {
       controlMode = Manual;
       robot.stop();
+      Serial.println("Entering manual mode.");
    }
 
    if (controlMode == Manual) {
